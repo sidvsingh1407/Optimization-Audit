@@ -1,0 +1,27 @@
+{
+  "company_name": "Test Corp",
+  "industry": "SaaS",
+  "employee_count": "50-99",
+  "contact_name": "John Doe",
+  "contact_email": "john@testcorp.com",
+  "benchmark_opt_in": true,
+  "responses": {
+    "q1_1": "b",
+    "q1_2": "a",
+    "q1_3": "b",
+    "q2_1": "b",
+    "q2_2": "c",
+    "q2_3": "a",
+    "q3_1": "c",
+    "q3_2": "b",
+    "q3_3": "b",
+    "q4_1": "d",
+    "q4_2": "c",
+    "q4_3": "d",
+    "q5_1": "b",
+    "q5_2": "c",
+    "q5_3": "b",
+    "monthly_spend": "$2K-$10K",
+    "tools_used": "ChatGPT, Copilot, Jasper, Midjourney"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "dimensions": {
+    "awareness": 17,
+    "adoption": 15,
+    "integration": 13,
+    "governance": 18,
+    "roi": 13
+  },
+  "total_score": 76,
+  "rating": "AI Adopting",
+  "compliance_risk_flag": false,
+  "compliance_risk_reasons": [],
+  "contradictions": [],
+  "missing_data_flags": []
+}

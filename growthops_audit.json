@@ -1,0 +1,25 @@
+{
+  "company_name": "GrowthOps Marketing",
+  "industry": "Marketing Agency",
+  "employee_count": "50-99",
+  "contact_name": "Aman Verma",
+  "contact_email": "aman@growthops.co",
+  "benchmark_opt_in": true,
+  "responses": {
+    "q1_1": "b",
+    "q1_2": "a",
+    "q1_3": "b",
+    "q2_1": "c",
+    "q2_2": "b",
+    "q2_3": "a",
+    "q3_1": "b",
+    "q3_2": "b",
+    "q3_3": "c",
+    "q4_1": "a",
+    "q4_2": "b",
+    "q4_3": "a",
+    "q5_1": "b",
+    "q5_2": "c",
+    "q5_3": "b"
+  }
+}

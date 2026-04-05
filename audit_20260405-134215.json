@@ -1,0 +1,99 @@
+{
+  "company_name": "GrowthOps Marketing",
+  "audit_date": "2026-04-05T13:42:15.558104",
+  "scores": {
+    "dimensions": {
+      "awareness": 17,
+      "adoption": 15,
+      "integration": 13,
+      "governance": 18,
+      "roi": 13
+    },
+    "total_score": 76,
+    "rating": "AI Adopting",
+    "compliance_risk_flag": false,
+    "compliance_risk_reasons": [],
+    "contradictions": [],
+    "missing_data_flags": []
+  },
+  "agent_findings": {
+    "tool_evaluator": {
+      "redundancies": [],
+      "gaps": [],
+      "underutilized": [],
+      "total_waste_estimate": "$0/month",
+      "tool_recommendations": []
+    },
+    "workflow_optimizer": {
+      "automation_opportunities": [],
+      "integration_gaps": [],
+      "quick_wins": [],
+      "priority_recommendations": [
+        {
+          "rank": 1,
+          "recommendation": "Focus on integration over new tools",
+          "rationale": "Low integration score indicates tools exist but aren't embedded in workflows"
+        }
+      ]
+    },
+    "compliance_auditor": {
+      "eu_ai_act": {
+        "risk_level": "low",
+        "high_risk_uses": [],
+        "compliance_deadline": "August 2026",
+        "required_actions": []
+      },
+      "gdpr": {
+        "risk_level": "low",
+        "data_concerns": [],
+        "required_actions": []
+      },
+      "governance_gaps": [],
+      "remediation_timeline": [
+        {},
+        {},
+        {
+          "deadline": "90 days",
+          "action": "Complete compliance assessment"
+        }
+      ],
+      "overall_risk": "low",
+      "summary": "Compliance risk level: low. Governance score of 18/20 indicates moderate maturity. EU AI Act deadline is August 2026."
+    },
+    "analytics_reporter": {
+      "executive_summary": "This audit reveals an AI maturity score of 76/100 (AI Adopting). The organization is ahead of industry benchmarks. Key opportunities identified include tool consolidation (estimated $0/month waste), workflow integration improvements, and compliance remediation before the August 2026 EU AI Act deadline.",
+      "cost_waste": {
+        "monthly_estimate": "$0/month",
+        "annual_estimate": "N/A",
+        "waste_categories": [
+          "Redundant tool subscriptions",
+          "Underutilized enterprise features",
+          "Manual processes that could be automated"
+        ]
+      },
+      "improvement_potential": {
+        "time_savings_current": "52% (estimated)",
+        "time_savings_potential": "60% (with recommendations)",
+        "productivity_gain_value": "$0/year (estimated)"
+      },
+      "benchmark_position": {
+        "score": 76,
+        "industry_avg": "TBD (need benchmark data)",
+        "percentile": "TBD",
+        "interpretation": "above average"
+      },
+      "top_5_recommendations": [
+        {
+          "rank": 1,
+          "action": "Establish AI governance committee and draft usage policy",
+          "impact": "Risk mitigation, consistent decision-making",
+          "effort": "low"
+        }
+      ],
+      "urgency_flag": {
+        "has_urgency": false,
+        "reason": "cost optimization"
+      }
+    }
+  }
+}

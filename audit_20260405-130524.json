@@ -1,0 +1,123 @@
+{
+  "company_name": "Unknown",
+  "audit_date": "2026-04-05T13:05:24.591380",
+  "scores": {
+    "dimensions": {
+      "awareness": 17,
+      "adoption": 15,
+      "integration": 13,
+      "governance": 7,
+      "roi": 13
+    },
+    "total_score": 65,
+    "rating": "AI Adopting",
+    "compliance_risk_flag": true,
+    "compliance_risk_reasons": [
+      "q4_1",
+      "q4_3"
+    ],
+    "contradictions": [],
+    "missing_data_flags": []
+  },
+  "agent_findings": {
+    "tool_evaluator": {
+      "redundancies": [],
+      "gaps": [],
+      "underutilized": [],
+      "total_waste_estimate": "$0/month",
+      "tool_recommendations": []
+    },
+    "workflow_optimizer": {
+      "automation_opportunities": [],
+      "integration_gaps": [],
+      "quick_wins": [],
+      "priority_recommendations": [
+        {
+          "rank": 1,
+          "recommendation": "Focus on integration over new tools",
+          "rationale": "Low integration score indicates tools exist but aren't embedded in workflows"
+        }
+      ]
+    },
+    "compliance_auditor": {
+      "eu_ai_act": {
+        "risk_level": "high",
+        "high_risk_uses": [],
+        "compliance_deadline": "August 2026",
+        "required_actions": [
+          "Complete EU AI Act awareness training for leadership",
+          "Assess if any AI uses fall under high-risk categories"
+        ]
+      },
+      "gdpr": {
+        "risk_level": "low",
+        "data_concerns": [],
+        "required_actions": []
+      },
+      "governance_gaps": [
+        {
+          "gap": "No formal AI usage policy",
+          "risk": "high",
+          "fix": "Draft and communicate AI usage policy within 30 days"
+        }
+      ],
+      "remediation_timeline": [
+        {
+          "deadline": "immediate",
+          "action": "Leadership briefing on EU AI Act requirements"
+        },
+        {
+          "deadline": "30 days",
+          "action": "Draft AI usage policy"
+        },
+        {
+          "deadline": "90 days",
+          "action": "Complete compliance assessment"
+        }
+      ],
+      "overall_risk": "critical",
+      "summary": "Compliance risk level: critical. Governance score of 7/20 indicates significant gaps. EU AI Act deadline is August 2026."
+    },
+    "analytics_reporter": {
+      "executive_summary": "This audit reveals an AI maturity score of 65/100 (AI Adopting). The organization is ahead of industry benchmarks. Key opportunities identified include tool consolidation (estimated $0/month waste), workflow integration improvements, and compliance remediation before the August 2026 EU AI Act deadline.",
+      "cost_waste": {
+        "monthly_estimate": "$0/month",
+        "annual_estimate": "N/A",
+        "waste_categories": [
+          "Redundant tool subscriptions",
+          "Underutilized enterprise features",
+          "Manual processes that could be automated"
+        ]
+      },
+      "improvement_potential": {
+        "time_savings_current": "52% (estimated)",
+        "time_savings_potential": "67% (with recommendations)",
+        "productivity_gain_value": "$0/year (estimated)"
+      },
+      "benchmark_position": {
+        "score": 65,
+        "industry_avg": "TBD (need benchmark data)",
+        "percentile": "TBD",
+        "interpretation": "above average"
+      },
+      "top_5_recommendations": [
+        {
+          "rank": 1,
+          "action": "Address compliance gaps immediately (EU AI Act deadline: Aug 2026)",
+          "impact": "Avoid regulatory penalties",
+          "effort": "medium"
+        },
+        {
+          "rank": 2,
+          "action": "Establish AI governance committee and draft usage policy",
+          "impact": "Risk mitigation, consistent decision-making",
+          "effort": "low"
+        }
+      ],
+      "urgency_flag": {
+        "has_urgency": true,
+        "reason": "cost optimization"
+      }
+    }
+  }
+}
