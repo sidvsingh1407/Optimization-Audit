@@ -143,4 +143,4 @@ Client-facing PDF report with:
 
 ## License
 
-MIT
+@sidsvingh
