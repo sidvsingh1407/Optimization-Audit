@@ -16,6 +16,8 @@ from datetime import datetime
 from pathlib import Path
 
 from scoring_engine import calculate_scores, format_score_report, load_form_responses
+from backend.utils.logger import app_logger
+from backend.utils.fs_safety import sanitize_filename, get_safe_output_dir, get_safe_report_dir
 
 
 # =============================================================================
@@ -321,14 +323,20 @@ def run_audit(form_response_path):
     # Step 4: Save intermediate results
     print("[4/5] Saving audit results...")
 
-    output_dir = Path(form_response_path).parent
+    output_dir = get_safe_output_dir()
+    report_dir = get_safe_report_dir()
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    safe_company = sanitize_filename(company_name)
 
     # Save scores
-    scores_path = output_dir / f"scores_{timestamp}.json"
-    with open(scores_path, 'w') as f:
-        json.dump(scores, f, indent=2)
-    print(f"      Scores saved: {scores_path}")
+    scores_path = output_dir / f"scores_{safe_company}_{timestamp}.json"
+    try:
+        with open(scores_path, 'w') as f:
+            json.dump(scores, f, indent=2)
+        print(f"      Scores saved: {scores_path}")
+    except Exception as e:
+        app_logger.error(f"Failed to save scores: {e}")
+        print(f"      Warning: Could not save scores to {scores_path}")
 
     # Save full audit
     audit_result = {
@@ -343,22 +351,31 @@ def run_audit(form_response_path):
         }
     }
 
-    audit_path = output_dir / f"audit_{timestamp}.json"
-    with open(audit_path, 'w') as f:
-        json.dump(audit_result, f, indent=2)
-    print(f"      Audit results saved: {audit_path}")
+    audit_path = output_dir / f"audit_{safe_company}_{timestamp}.json"
+    try:
+        with open(audit_path, 'w') as f:
+            json.dump(audit_result, f, indent=2)
+        print(f"      Audit results saved: {audit_path}")
+    except Exception as e:
+        app_logger.error(f"Failed to save audit results: {e}")
+        print(f"      Warning: Could not save audit to {audit_path}")
     print()
 
     # Step 5: Generate PDF report
     print("[5/5] Generating PDF report...")
     try:
         from report_generator import generate_report
-        pdf_path = output_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
+        pdf_path = report_dir / f"report_{safe_company}_{timestamp}.pdf"
         generate_report(data, scores, audit_result['agent_findings'], str(pdf_path))
         print(f"      Report saved: {pdf_path}")
     except ImportError as e:
+        app_logger.warning(f"report_generator not available ({e})")
         print(f"      Warning: report_generator not available ({e})")
         print("      Install with: pip install reportlab")
+        pdf_path = None
+    except Exception as e:
+        app_logger.error(f"Report generation failed: {e}")
+        print(f"      Error: Report generation failed: {e}")
         pdf_path = None
 
     print()

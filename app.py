@@ -17,6 +17,11 @@ from datetime import datetime
 from pathlib import Path
 
 from scoring_engine import calculate_scores, format_score_report
+from backend.utils.logger import app_logger
+from backend.utils.fs_safety import sanitize_filename, get_safe_output_dir, get_safe_report_dir
+from backend.db.database import safe_save_audit, init_db
+from backend.config.settings import settings
+import streamlit_authenticator as stauth
 from orchestrator import (
     analyze_tools,
     analyze_workflows,
@@ -411,13 +416,49 @@ def render_results(scores, audit_result, pdf_path):
 
 def main():
     """Main app."""
+    # Authentication Bootstrap
+    auth_config = settings.auth_credentials
+    cookie_config = settings.cookie_config
+
+    if auth_config:
+        # We only enforce auth if credentials are provided in secrets
+        authenticator = stauth.Authenticate(
+            auth_config,
+            cookie_config.get("name", "audit_app_cookie"),
+            cookie_config.get("key", "signature_key"),
+            cookie_config.get("expiry_days", 30)
+        )
+
+        try:
+            authenticator.login()
+        except Exception as e:
+            app_logger.error(f"Authentication error: {e}")
+            st.error("Authentication system encountered an error.")
+            return
+
+        if st.session_state["authentication_status"] is False:
+            st.error('Username/password is incorrect')
+            return
+        elif st.session_state["authentication_status"] is None:
+            st.warning('Please enter your username and password')
+            return
+
+        authenticator.logout('Logout', 'sidebar')
+
+    # Ensure database is initialized safely
+    init_db()
+
     render_header()
 
-    # Initialize session state
+    # Initialize session state safely
     if 'step' not in st.session_state:
         st.session_state.step = 0
     if 'form_key' not in st.session_state:
         st.session_state.form_key = 0
+    if 'audit_data' not in st.session_state:
+        st.session_state.audit_data = None
+    if 'is_processing' not in st.session_state:
+        st.session_state.is_processing = False
 
     # Progress bar
     if st.session_state.step == 0:
@@ -466,73 +507,109 @@ def main():
         # Submit button
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🚀 Run AI Audit", type="primary", use_container_width=True):
-                # Validate required fields
-                if not all([
-                    company_data['company_name'],
-                    company_data['contact_name'],
-                    company_data['contact_email']
-                ]):
-                    st.error("Please fill in all required fields (marked with *)")
-                else:
-                    # Combine all data
-                    responses = {**awareness, **adoption, **integration, **governance, **roi}
+            if st.button("🚀 Run AI Audit", type="primary", use_container_width=True, disabled=st.session_state.is_processing):
+                st.session_state.is_processing = True
 
-                    audit_data = {
-                        **company_data,
-                        **spend_data,
-                        "responses": responses
-                    }
+                try:
+                    # Validate required fields
+                    if not all([
+                        company_data['company_name'],
+                        company_data['contact_name'],
+                        company_data['contact_email']
+                    ]):
+                        st.error("Please fill in all required fields (marked with *)")
+                        st.session_state.is_processing = False
+                    else:
+                        # Combine all data
+                        responses = {**awareness, **adoption, **integration, **governance, **roi}
 
-                    st.session_state.audit_data = audit_data
-                    st.session_state.step = 1
-                    st.rerun()
+                        audit_data = {
+                            **company_data,
+                            **spend_data,
+                            "responses": responses
+                        }
+
+                        st.session_state.audit_data = audit_data
+                        st.session_state.step = 1
+                        st.rerun()
+                except Exception as e:
+                    st.session_state.is_processing = False
+                    app_logger.error(f"Form submission error: {e}")
+                    st.error("An unexpected error occurred during submission. Please try again.")
 
     # Step 1: Processing
     elif st.session_state.step == 1:
         st.markdown("")
         st.info("🔄 Processing your audit...")
 
-        audit_data = st.session_state.audit_data
-        responses = audit_data['responses']
+        try:
+            audit_data = st.session_state.audit_data
+            if not audit_data:
+                raise ValueError("Session data corrupted. Please start over.")
 
-        # Run scoring
-        scores = calculate_scores(responses)
+            responses = audit_data['responses']
 
-        # Run agent analyses
-        tool_analysis = analyze_tools(responses, audit_data)
-        workflow_analysis = analyze_workflows(responses, scores)
-        compliance_analysis = analyze_compliance(responses, scores)
-        analytics_report = generate_analytics_report(
-            scores, tool_analysis, workflow_analysis, compliance_analysis, audit_data
-        )
+            # Run scoring
+            scores = calculate_scores(responses)
 
-        # Generate PDF
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        safe_name = audit_data['company_name'].replace(' ', '_').replace('/', '_')
-        pdf_path = f"report_{safe_name}_{timestamp}.pdf"
+            # Run agent analyses
+            tool_analysis = analyze_tools(responses, audit_data)
+            workflow_analysis = analyze_workflows(responses, scores)
+            compliance_analysis = analyze_compliance(responses, scores)
+            analytics_report = generate_analytics_report(
+                scores, tool_analysis, workflow_analysis, compliance_analysis, audit_data
+            )
 
-        audit_result = {
-            'company_name': audit_data['company_name'],
-            'audit_date': datetime.now().isoformat(),
-            'scores': scores,
-            'agent_findings': {
-                'tool_evaluator': tool_analysis,
-                'workflow_optimizer': workflow_analysis,
-                'compliance_auditor': compliance_analysis,
-                'analytics_reporter': analytics_report,
+            # Generate PDF
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            safe_name = sanitize_filename(audit_data['company_name'])
+
+            report_dir = get_safe_report_dir()
+            pdf_path = str(report_dir / f"report_{safe_name}_{timestamp}.pdf")
+
+            audit_result = {
+                'company_name': audit_data['company_name'],
+                'audit_date': datetime.now().isoformat(),
+                'scores': scores,
+                'agent_findings': {
+                    'tool_evaluator': tool_analysis,
+                    'workflow_optimizer': workflow_analysis,
+                    'compliance_auditor': compliance_analysis,
+                    'analytics_reporter': analytics_report,
+                }
             }
-        }
 
-        generate_report(audit_data, scores, audit_result['agent_findings'], pdf_path)
+            # Save audit to SQLite safely
+            safe_save_audit(
+                company_name=audit_data['company_name'],
+                audit_date=audit_result['audit_date'],
+                total_score=scores['total_score'],
+                rating=scores['rating'],
+                raw_data_path=f"data/generated_outputs/audit_{safe_name}_{timestamp}.json"
+            )
 
-        # Show results
-        render_results(scores, audit_result, pdf_path)
+            # Safe Report Generation
+            try:
+                generate_report(audit_data, scores, audit_result['agent_findings'], pdf_path)
+            except Exception as e:
+                app_logger.error(f"Failed to generate PDF for {safe_name}: {e}")
+                pdf_path = None
+                st.error("There was an issue generating the PDF report. The audit data was saved.")
+
+            # Show results
+            render_results(scores, audit_result, pdf_path)
+            st.session_state.is_processing = False
+
+        except Exception as e:
+            app_logger.error(f"Audit processing failed: {e}")
+            st.error("A critical error occurred while processing the audit. Our team has been notified.")
+            st.session_state.is_processing = False
 
         # New audit button
         st.markdown("")
         if st.button("🔄 Start New Audit"):
             st.session_state.step = 0
+            st.session_state.audit_data = None
             st.session_state.form_key += 1
             st.rerun()
 
