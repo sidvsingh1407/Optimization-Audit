@@ -12,10 +12,15 @@ Usage:
 import json
 import sys
 import os
+import logging
 from datetime import datetime
 from pathlib import Path
 
 from scoring_engine import calculate_scores, format_score_report, load_form_responses
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -25,7 +30,19 @@ from scoring_engine import calculate_scores, format_score_report, load_form_resp
 # For MVP, we use rule-based analysis to keep costs near zero
 
 
-def analyze_tools(responses, audit_data):
+def parse_spend(spend_str):
+    """Safely parse a spend string to an integer, handling commas and symbols."""
+    if not spend_str:
+        return 0
+    try:
+        # Extract digits only, ignoring other characters
+        digits = ''.join(filter(str.isdigit, str(spend_str)))
+        return int(digits) if digits else 0
+    except ValueError:
+        return 0
+
+
+def analyze_tools(responses, audit_data, scores):
     """Rule-based tool analysis (MVP version)."""
     tools_used = audit_data.get('tools_used', '').lower()
     tool_count = len([t for t in tools_used.split(',') if t.strip()]) if tools_used else 0
@@ -53,7 +70,7 @@ def analyze_tools(responses, audit_data):
         waste_estimate += 300
 
     # High spend with low adoption = underutilization
-    adoption_score = calculate_scores(responses).get('dimensions', {}).get('adoption', 0)
+    adoption_score = scores.get('dimensions', {}).get('adoption', 0)
     if monthly_spend in ['$2K-$10K', '$10K+'] and adoption_score < 12:
         underutilized.append({
             'tool': 'Enterprise AI tools',
@@ -229,13 +246,8 @@ def generate_analytics_report(scores, tool_analysis, workflow_analysis, complian
     monthly_spend = audit_data.get('monthly_spend', 'Unknown')
     waste_estimate = tool_analysis.get('total_waste_estimate', '$0')
 
-    # Parse waste estimate
-    waste_num = 0
-    if '$' in waste_estimate:
-        try:
-            waste_num = int(''.join(filter(str.isdigit, waste_estimate)))
-        except:
-            pass
+    # Parse waste estimate safely
+    waste_num = parse_spend(waste_estimate)
 
     # Estimate improvement potential
     governance_score = scores.get('dimensions', {}).get('governance', 0)
@@ -279,56 +291,54 @@ def generate_analytics_report(scores, tool_analysis, workflow_analysis, complian
 
 def run_audit(form_response_path):
     """Run complete audit pipeline."""
-    print("=" * 60)
-    print("AI PRODUCTIVITY INTELLIGENCE SYSTEM")
-    print("Audit Pipeline")
-    print("=" * 60)
-    print()
+    logger.info("=" * 60)
+    logger.info("AI PRODUCTIVITY INTELLIGENCE SYSTEM")
+    logger.info("Audit Pipeline")
+    logger.info("=" * 60)
 
     # Step 1: Load form responses
-    print("[1/5] Loading form responses...")
+    logger.info("[1/5] Loading form responses...")
     data = load_form_responses(form_response_path)
     # Company name can be at root level OR inside responses
     company_name = data.get('company_name') or data.get('responses', {}).get('company_name', 'Unknown')
     audit_data = data.get('responses', data)
-    print(f"      Company: {company_name}")
-    print()
+    logger.info(f"      Company: {company_name}")
 
     # Step 2: Calculate scores
-    print("[2/5] Calculating AI maturity scores...")
+    logger.info("[2/5] Calculating AI maturity scores...")
     scores = calculate_scores(audit_data)
-    print(format_score_report(scores, company_name))
-    print()
+    logger.info("\n" + format_score_report(scores, company_name))
 
     # Step 3: Run agent analyses
-    print("[3/5] Running agent analyses...")
+    logger.info("[3/5] Running agent analyses...")
 
-    print("      - Tool Evaluator...")
-    tool_analysis = analyze_tools(audit_data, data)
+    logger.info("      - Tool Evaluator...")
+    tool_analysis = analyze_tools(audit_data, data, scores)
 
-    print("      - Workflow Optimizer...")
+    logger.info("      - Workflow Optimizer...")
     workflow_analysis = analyze_workflows(audit_data, scores)
 
-    print("      - Compliance Auditor...")
+    logger.info("      - Compliance Auditor...")
     compliance_analysis = analyze_compliance(audit_data, scores)
 
-    print("      - Analytics Reporter...")
+    logger.info("      - Analytics Reporter...")
     analytics_report = generate_analytics_report(scores, tool_analysis, workflow_analysis, compliance_analysis, data)
 
-    print("      Done.")
-    print()
+    logger.info("      Done.")
 
     # Step 4: Save intermediate results
-    print("[4/5] Saving audit results...")
+    logger.info("[4/5] Saving audit results...")
 
     output_dir = Path(form_response_path).parent
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # Save scores
-    scores_path = output_dir / f"scores_{timestamp}.json"
+    generated_outputs_dir = Path('generated_outputs')
+    generated_outputs_dir.mkdir(parents=True, exist_ok=True)
+    scores_path = generated_outputs_dir / f"scores_{timestamp}.json"
     with open(scores_path, 'w') as f:
         json.dump(scores, f, indent=2)
-    print(f"      Scores saved: {scores_path}")
+    logger.info(f"      Scores saved: {scores_path}")
 
     # Save full audit
     audit_result = {
@@ -343,28 +353,28 @@ def run_audit(form_response_path):
         }
     }
 
-    audit_path = output_dir / f"audit_{timestamp}.json"
+    audit_path = generated_outputs_dir / f"audit_{timestamp}.json"
     with open(audit_path, 'w') as f:
         json.dump(audit_result, f, indent=2)
-    print(f"      Audit results saved: {audit_path}")
-    print()
+    logger.info(f"      Audit results saved: {audit_path}")
 
     # Step 5: Generate PDF report
-    print("[5/5] Generating PDF report...")
+    logger.info("[5/5] Generating PDF report...")
     try:
         from report_generator import generate_report
-        pdf_path = output_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
+        generated_reports_dir = Path('generated_reports')
+        generated_reports_dir.mkdir(parents=True, exist_ok=True)
+        pdf_path = generated_reports_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
         generate_report(data, scores, audit_result['agent_findings'], str(pdf_path))
-        print(f"      Report saved: {pdf_path}")
+        logger.info(f"      Report saved: {pdf_path}")
     except ImportError as e:
-        print(f"      Warning: report_generator not available ({e})")
-        print("      Install with: pip install reportlab")
+        logger.warning(f"      Warning: report_generator not available ({e})")
+        logger.warning("      Install with: pip install reportlab")
         pdf_path = None
 
-    print()
-    print("=" * 60)
-    print("AUDIT COMPLETE")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("AUDIT COMPLETE")
+    logger.info("=" * 60)
 
     return {
         'scores_path': str(scores_path),

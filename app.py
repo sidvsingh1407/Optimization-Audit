@@ -152,141 +152,31 @@ def render_score_section(section_name, questions):
 
 def render_awareness_section():
     """Render Awareness section."""
-    questions = [
-        ("q1_1", "How would you rate leadership's understanding of AI capabilities and limitations?", [
-            "a) Very high - can articulate specific use cases and strategic implications",
-            "b) High - general understanding of AI capabilities",
-            "c) Moderate - aware of AI but understanding is vague",
-            "d) Low - minimal understanding of AI",
-            "e) None - no AI awareness at leadership level"
-        ]),
-        ("q1_2", "Does your company have a documented AI strategy?", [
-            "a) Yes, formally documented and communicated to the organization",
-            "b) Yes, but not formally documented (informal understanding)",
-            "c) In progress - currently being developed",
-            "d) No, but planning to create one",
-            "e) No"
-        ]),
-        ("q1_3", "How are AI-related decisions made in your organization?", [
-            "a) Dedicated AI committee with executive sponsor",
-            "b) Executive-led with team input",
-            "c) Ad-hoc by department heads",
-            "d) Individual employees decide independently",
-            "e) No coordination of AI decisions"
-        ])
-    ]
+    questions = [(q, QUESTIONS[q]["text"], QUESTIONS[q]["options"]) for q in ["q1_1", "q1_2", "q1_3"]]
     return render_score_section("Awareness", questions)
 
 
 def render_adoption_section():
     """Render Adoption section."""
-    questions = [
-        ("q2_1", "What percentage of employees actively use AI tools in their work?", [
-            "a) 75% or more",
-            "b) 50-74%",
-            "c) 25-49%",
-            "d) 10-24%",
-            "e) Less than 10%"
-        ]),
-        ("q2_2", "How many AI tools are currently in active use at your company?", [
-            "a) 6+ tools (diverse AI stack)",
-            "b) 4-5 tools",
-            "c) 2-3 tools",
-            "d) 1 tool",
-            "e) None"
-        ]),
-        ("q2_3", "How frequently do employees use AI tools?", [
-            "a) Daily",
-            "b) Several times per week",
-            "c) Weekly",
-            "d) Monthly",
-            "e) Rarely or never"
-        ])
-    ]
+    questions = [(q, QUESTIONS[q]["text"], QUESTIONS[q]["options"]) for q in ["q2_1", "q2_2", "q2_3"]]
     return render_score_section("Adoption", questions)
 
 
 def render_integration_section():
     """Render Integration section."""
-    questions = [
-        ("q3_1", "How is AI integrated into your technology stack?", [
-            "a) Deeply integrated (API connections, custom workflows, embedded in systems)",
-            "b) Moderate integration (some automated workflows)",
-            "c) Light integration (standalone tools, manual copy/paste)",
-            "d) Minimal integration (mostly manual processes)",
-            "e) No integration"
-        ]),
-        ("q3_2", "Is AI integrated into your core business systems (CRM, ERP, etc.)?", [
-            "a) Yes - integrated into CRM, ERP, or core platform",
-            "b) Yes - integrated into some business systems",
-            "c) Planning integration (in roadmap)",
-            "d) No, but considering it",
-            "e) No"
-        ]),
-        ("q3_3", "How are AI workflows and best practices documented?", [
-            "a) Fully documented with formal training provided",
-            "b) Documented but training is informal",
-            "c) Partial documentation exists",
-            "d) Ad-hoc knowledge sharing only",
-            "e) No documentation"
-        ])
-    ]
+    questions = [(q, QUESTIONS[q]["text"], QUESTIONS[q]["options"]) for q in ["q3_1", "q3_2", "q3_3"]]
     return render_score_section("Integration", questions)
 
 
 def render_governance_section():
     """Render Governance section."""
-    questions = [
-        ("q4_1", "Does your company have policies governing AI usage?", [
-            "a) Comprehensive policy with enforcement mechanisms",
-            "b) Basic guidelines provided to employees",
-            "c) Draft policy in development",
-            "d) Informal guidelines only",
-            "e) No AI usage policy"
-        ]),
-        ("q4_2", "How does your company handle data privacy when using AI tools?", [
-            "a) Formal review process + approved tools only",
-            "b) Guidelines provided to employees",
-            "c) Ad-hoc review on request",
-            "d) Left to employee discretion",
-            "e) No oversight"
-        ]),
-        ("q4_3", "What is your organization's status regarding EU AI Act compliance?", [
-            "a) Fully assessed and compliant",
-            "b) Assessment in progress",
-            "c) Aware of requirements but not started",
-            "d) Heard of it but taken no action",
-            "e) Unaware of EU AI Act"
-        ])
-    ]
+    questions = [(q, QUESTIONS[q]["text"], QUESTIONS[q]["options"]) for q in ["q4_1", "q4_2", "q4_3"]]
     return render_score_section("Governance", questions)
 
 
 def render_roi_section():
     """Render ROI section."""
-    questions = [
-        ("q5_1", "Does your company measure ROI from AI investments?", [
-            "a) Yes, formal metrics with regular review",
-            "b) Yes, informal tracking",
-            "c) Basic measurement (time savings estimates)",
-            "d) No, but planning to",
-            "e) No measurement"
-        ]),
-        ("q5_2", "What is your estimated time savings from AI usage?", [
-            "a) 25% or more across knowledge work",
-            "b) 15-24%",
-            "c) 5-14%",
-            "d) Less than 5%",
-            "e) No measurable time savings"
-        ]),
-        ("q5_3", "How would you rate AI's overall business impact?", [
-            "a) Transformational - fundamentally changing how we operate",
-            "b) Significant - measurable positive impact",
-            "c) Moderate - some positive impact",
-            "d) Minimal - limited visible impact",
-            "e) Negative or no impact"
-        ])
-    ]
+    questions = [(q, QUESTIONS[q]["text"], QUESTIONS[q]["options"]) for q in ["q5_1", "q5_2", "q5_3"]]
     return render_score_section("ROI", questions)
 
 
