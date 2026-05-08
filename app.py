@@ -24,7 +24,14 @@ from orchestrator import (
     generate_analytics_report
 )
 from report_generator import generate_report
+import re
+from backend.db.database import init_db
+from backend.db.audit_repository import get_recent_audits, get_total_audits_count, get_compliance_risk_count, get_average_score, save_audit
+from backend.db.benchmark_repository import get_benchmark_averages_by_industry, get_benchmark_averages_by_size, save_benchmark
+from backend.db.report_repository import get_recent_reports, save_report
 
+# Initialize database
+init_db()
 
 # Page config
 st.set_page_config(
@@ -318,6 +325,49 @@ def render_spend_section():
     }
 
 
+def render_dashboard():
+    """Render the historical dashboard."""
+    st.header("📊 Intelligence Dashboard")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Audits", get_total_audits_count())
+    with col2:
+        st.metric("Avg Maturity Score", f"{get_average_score()}/100")
+    with col3:
+        st.metric("Compliance Risks", get_compliance_risk_count())
+
+    st.divider()
+
+    st.subheader("Recent Audits")
+    recent_audits = get_recent_audits(limit=5)
+    if recent_audits:
+        for audit in recent_audits:
+            with st.expander(f"{audit['company_name']} - {audit['audit_date'][:10]} - Score: {audit['total_score']}"):
+                st.write(f"**Industry:** {audit['industry']}")
+                st.write(f"**Compliance Risk:** {'Yes' if audit['compliance_risk_flag'] else 'No'}")
+                st.write("**Dimension Scores:**")
+                st.write(f"Awareness: {audit['awareness']} | Adoption: {audit['adoption']} | Integration: {audit['integration']} | Governance: {audit['governance']} | ROI: {audit['roi']}")
+    else:
+        st.info("No audits found in the database.")
+
+    st.divider()
+
+    st.subheader("Industry Benchmarks")
+    benchmarks_ind = get_benchmark_averages_by_industry()
+    if benchmarks_ind:
+        for b in benchmarks_ind:
+            st.write(f"- **{b['industry']}**: {b['count']} companies, Avg Score: {round(b['avg_score'], 1)}")
+    else:
+        st.info("No benchmark data available.")
+
+    st.subheader("Size Benchmarks")
+    benchmarks_size = get_benchmark_averages_by_size()
+    if benchmarks_size:
+        for b in benchmarks_size:
+            st.write(f"- **{b['employee_count']}**: {b['count']} companies, Avg Score: {round(b['avg_score'], 1)}")
+
+
 def render_results(scores, audit_result, pdf_path):
     """Render the results page."""
     st.markdown("")
@@ -411,6 +461,14 @@ def render_results(scores, audit_result, pdf_path):
 
 def main():
     """Main app."""
+
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Go to", ["New Audit", "Dashboard"])
+
+    if page == "Dashboard":
+        render_dashboard()
+        return
+
     render_header()
 
     # Initialize session state
@@ -507,10 +565,15 @@ def main():
             scores, tool_analysis, workflow_analysis, compliance_analysis, audit_data
         )
 
-        # Generate PDF
+        # Generate Output JSON
+        output_dir = Path("data/generated_outputs")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report_dir = Path("data/generated_reports")
+        report_dir.mkdir(parents=True, exist_ok=True)
+
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        safe_name = audit_data['company_name'].replace(' ', '_').replace('/', '_')
-        pdf_path = f"report_{safe_name}_{timestamp}.pdf"
+        safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', audit_data['company_name'])
+        pdf_path = report_dir / f"report_{safe_name}_{timestamp}.pdf"
 
         audit_result = {
             'company_name': audit_data['company_name'],
@@ -524,7 +587,36 @@ def main():
             }
         }
 
-        generate_report(audit_data, scores, audit_result['agent_findings'], pdf_path)
+        # Save JSON output (as required by specs)
+        audit_path = output_dir / f"audit_{timestamp}.json"
+        with open(audit_path, 'w') as f:
+            json.dump(audit_result, f, indent=2)
+
+        # Persistence to SQLite
+        try:
+            compliance_findings_db = []
+            eu_ai_risk = compliance_analysis.get('eu_ai_act', {}).get('risk_level', '').lower()
+            if eu_ai_risk in ['high', 'medium']:
+                compliance_findings_db.append({
+                    'regulation': 'EU AI Act',
+                    'finding_text': compliance_analysis['eu_ai_act'].get('status', 'Unknown status'),
+                    'risk_level': compliance_analysis['eu_ai_act'].get('risk_level'),
+                    'recommendation_text': compliance_analysis['eu_ai_act'].get('recommendation', '')
+                })
+            audit_id = save_audit(audit_data, scores, compliance_findings_db, audit_type="structured")
+            save_benchmark(audit_id, audit_data, scores)
+        except Exception as e:
+            st.error(f"Failed to persist audit to database: {e}")
+            audit_id = None
+
+        # Generate PDF
+        try:
+            generate_report(audit_data, scores, audit_result['agent_findings'], str(pdf_path))
+            if audit_id:
+                save_report(audit_id, str(pdf_path.name), str(pdf_path), audit_data['company_name'])
+        except Exception as e:
+            st.warning(f"Report generation/persistence issue: {e}")
+            pdf_path = None
 
         # Show results
         render_results(scores, audit_result, pdf_path)
