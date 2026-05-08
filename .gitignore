@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*$py.class
+data/audit_system.db
+data/generated_outputs/
+data/generated_reports/
+.env
+.pytest_cache/

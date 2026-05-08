@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from scoring_engine import calculate_scores, format_score_report, load_form_responses
+from backend.db.database import init_db
 
 
 # =============================================================================
@@ -291,6 +292,12 @@ def run_audit(form_response_path):
     # Company name can be at root level OR inside responses
     company_name = data.get('company_name') or data.get('responses', {}).get('company_name', 'Unknown')
     audit_data = data.get('responses', data)
+
+    # Merge top level fields into audit_data for DB insertion
+    for field in ['company_name', 'industry', 'employee_count', 'benchmark_opt_in']:
+        if field in data and field not in audit_data:
+            audit_data[field] = data[field]
+
     print(f"      Company: {company_name}")
     print()
 
@@ -321,7 +328,12 @@ def run_audit(form_response_path):
     # Step 4: Save intermediate results
     print("[4/5] Saving audit results...")
 
-    output_dir = Path(form_response_path).parent
+    # We must save JSONs and reports into data/generated_outputs/ and data/generated_reports/
+    output_dir = Path("data/generated_outputs")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_dir = Path("data/generated_reports")
+    report_dir.mkdir(parents=True, exist_ok=True)
+
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # Save scores
@@ -349,13 +361,54 @@ def run_audit(form_response_path):
     print(f"      Audit results saved: {audit_path}")
     print()
 
-    # Step 5: Generate PDF report
-    print("[5/5] Generating PDF report...")
+    # Step 5: Persist to SQLite Database
+    print("[5/6] Persisting to SQLite Database...")
     try:
+        init_db() # Ensure DB is initialized
+        from backend.db.audit_repository import save_audit
+        from backend.db.benchmark_repository import save_benchmark
+        from backend.db.report_repository import save_report
+
+        # Extract compliance findings for DB (mock formatting based on compliance_analysis)
+        compliance_findings_db = []
+        eu_ai_risk = compliance_analysis.get('eu_ai_act', {}).get('risk_level', '').lower()
+        if eu_ai_risk in ['high', 'medium']:
+            compliance_findings_db.append({
+                'regulation': 'EU AI Act',
+                'finding_text': compliance_analysis['eu_ai_act'].get('status', 'Unknown status'),
+                'risk_level': compliance_analysis['eu_ai_act'].get('risk_level'),
+                'recommendation_text': compliance_analysis['eu_ai_act'].get('recommendation', '')
+            })
+
+        audit_id = save_audit(audit_data, scores, compliance_findings_db, audit_type="structured")
+        print(f"      Audit persisted with ID: {audit_id}")
+
+        benchmark_id = save_benchmark(audit_id, audit_data, scores)
+        if benchmark_id:
+            print(f"      Benchmark entry saved: {benchmark_id}")
+    except Exception as e:
+        print(f"      Error persisting to database: {e}")
+        audit_id = None
+    print()
+
+    # Step 6: Generate PDF report
+    print("[6/6] Generating PDF report...")
+    try:
+        import re
         from report_generator import generate_report
-        pdf_path = output_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
+        safe_company_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', company_name)
+        pdf_path = report_dir / f"report_{safe_company_name}_{timestamp}.pdf"
         generate_report(data, scores, audit_result['agent_findings'], str(pdf_path))
         print(f"      Report saved: {pdf_path}")
+
+        # Save report metadata to DB
+        if audit_id:
+            try:
+                save_report(audit_id, str(pdf_path.name), str(pdf_path), company_name)
+                print("      Report metadata persisted.")
+            except Exception as db_e:
+                print(f"      Warning: could not persist report metadata ({db_e})")
+
     except ImportError as e:
         print(f"      Warning: report_generator not available ({e})")
         print("      Install with: pip install reportlab")
