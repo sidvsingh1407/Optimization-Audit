@@ -16,14 +16,18 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from scoring_engine import calculate_scores, format_score_report
-from orchestrator import (
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+from backend.scoring.scoring_engine import calculate_scores, format_score_report
+from backend.utils.data_loader import load_form_responses
+from backend.compliance.compliance_analyzer import analyze_compliance
+from backend.services.orchestrator_service import (
     analyze_tools,
     analyze_workflows,
-    analyze_compliance,
     generate_analytics_report
 )
-from report_generator import generate_report
+from backend.reports.report_generator import generate_report
 
 
 # Page config
