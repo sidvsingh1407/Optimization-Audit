@@ -8,6 +8,9 @@ Usage: python report_generator.py <audit_data.json> <scores.json> <output.pdf>
 
 import json
 import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+import sys
 from datetime import datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
