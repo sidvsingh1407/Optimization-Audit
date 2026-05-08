@@ -321,11 +321,14 @@ def run_audit(form_response_path):
     # Step 4: Save intermediate results
     print("[4/5] Saving audit results...")
 
-    output_dir = Path(form_response_path).parent
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    outputs_dir = Path("data/generated_outputs")
+    reports_dir = Path("data/generated_reports")
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
 
     # Save scores
-    scores_path = output_dir / f"scores_{timestamp}.json"
+    scores_path = outputs_dir / f"scores_{timestamp}.json"
     with open(scores_path, 'w') as f:
         json.dump(scores, f, indent=2)
     print(f"      Scores saved: {scores_path}")
@@ -343,7 +346,7 @@ def run_audit(form_response_path):
         }
     }
 
-    audit_path = output_dir / f"audit_{timestamp}.json"
+    audit_path = outputs_dir / f"audit_{timestamp}.json"
     with open(audit_path, 'w') as f:
         json.dump(audit_result, f, indent=2)
     print(f"      Audit results saved: {audit_path}")
@@ -353,11 +356,13 @@ def run_audit(form_response_path):
     print("[5/5] Generating PDF report...")
     try:
         from report_generator import generate_report
-        pdf_path = output_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
+        import re
+        safe_company_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', company_name)
+        pdf_path = reports_dir / f"report_{safe_company_name}_{timestamp}.pdf"
         generate_report(data, scores, audit_result['agent_findings'], str(pdf_path))
         print(f"      Report saved: {pdf_path}")
-    except ImportError as e:
-        print(f"      Warning: report_generator not available ({e})")
+    except Exception as e:
+        print(f"      Warning: report_generator failed ({e})")
         print("      Install with: pip install reportlab")
         pdf_path = None
 
