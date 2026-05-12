@@ -300,8 +300,22 @@ def run_audit(form_response_path):
     print(format_score_report(scores, company_name))
     print()
 
+    # Step 2.5: Generate Operational Intelligence Model & Persist
+    print("[3/6] Building Operational Truth Model...")
+    from backend.services.entity_mapper import map_organization
+    from backend.db.database import save_audit_state, init_db
+
+    # Ensure database is initialized
+    init_db()
+
+    org_model = map_organization(data, audit_data)
+    audit_id = save_audit_state(data, audit_data, scores['total_score'], org_model)
+    print(f"      Persisted Operational State (Audit ID: {audit_id})")
+    print(f"      Mapped {len(org_model.tools)} tools, {len(org_model.workflows)} workflows, {len(org_model.risks)} risks.")
+    print()
+
     # Step 3: Run agent analyses
-    print("[3/5] Running agent analyses...")
+    print("[4/6] Running agent analyses...")
 
     print("      - Tool Evaluator...")
     tool_analysis = analyze_tools(audit_data, data)
@@ -319,7 +333,7 @@ def run_audit(form_response_path):
     print()
 
     # Step 4: Save intermediate results
-    print("[4/5] Saving audit results...")
+    print("[5/6] Saving audit results...")
 
     output_dir = Path(form_response_path).parent
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -350,7 +364,7 @@ def run_audit(form_response_path):
     print()
 
     # Step 5: Generate PDF report
-    print("[5/5] Generating PDF report...")
+    print("[6/6] Generating PDF report...")
     try:
         from report_generator import generate_report
         pdf_path = output_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"

@@ -409,132 +409,244 @@ def render_results(scores, audit_result, pdf_path):
         st.warning("PDF report not available")
 
 
+def render_operational_intelligence():
+    """Render the operational intelligence dashboard."""
+    st.markdown("---")
+    st.header("Operational Intelligence Dashboard")
+
+    from backend.db.database import get_all_operational_states
+    import plotly.graph_objects as go
+    import pandas as pd
+    import json
+
+    states = get_all_operational_states()
+
+    if not states:
+        st.info("👋 Welcome to the Operational Intelligence Layer. No operational data exists yet.")
+        st.markdown("""
+        **Getting Started:**
+        1. Navigate to the **Audit Engine** tab.
+        2. Run your first audit to baseline an organization.
+        3. Return here to view deterministic insights, risk concentrations, and governance mapping.
+        """)
+        return
+
+    st.markdown("### Latest Operational States")
+
+    data = []
+    for state in states:
+        risk_counts = {"Low": 0, "Moderate": 0, "High": 0, "Critical": 0}
+        for r in state["risks"]:
+            risk_counts[r.get("severity", "Low")] += 1
+
+        data.append({
+            "Company": state["company_name"],
+            "Last Audit Run": state["audit_date"],
+            "Tools": len(state["tools"]),
+            "Workflows": len(state["workflows"]),
+            "Critical Risks": risk_counts["Critical"],
+            "High Risks": risk_counts["High"],
+            "Compliance Exposure": state["governance"].get("overall_exposure", state.get("compliance", {}).get("overall_exposure", "Unknown"))
+        })
+
+    df = pd.DataFrame(data)
+    st.dataframe(df, use_container_width=True)
+
+    st.download_button(
+        label="📥 Export Operational Summary (CSV)",
+        data=df.to_csv(index=False),
+        file_name="operational_summary.csv",
+        mime="text/csv"
+    )
+
+    st.markdown("### AI Tool Ecosystem Summaries")
+
+    all_tools = []
+    for state in states:
+        for tool in state["tools"]:
+            all_tools.append(tool["name"])
+
+    if all_tools:
+        tool_counts = pd.Series(all_tools).value_counts().reset_index()
+        tool_counts.columns = ["Tool", "Count"]
+
+        fig = go.Figure(data=[go.Bar(
+            x=tool_counts["Tool"],
+            y=tool_counts["Count"],
+            marker_color='#4A90E2'
+        )])
+        fig.update_layout(title="Tool Popularity Across Audits", xaxis_title="Tool", yaxis_title="Usage Count")
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("### Recent Governance Findings & Compliance Exposure")
+    for state in states[:3]: # Show top 3 recent
+        with st.expander(f"{state['company_name']} ({state['audit_date']})"):
+            st.markdown(f"**Overall Exposure:** {state['compliance'].get('overall_exposure', 'Unknown')}")
+            if state["compliance"].get("flags"):
+                st.markdown("**Compliance Flags (Why):**")
+                for flag in state["compliance"]["flags"]:
+                    st.markdown(f"- {flag}")
+
+            st.markdown(f"**Governance Maturity Score:** {state['governance'].get('maturity_score')}/100")
+            if state["governance"].get("gaps"):
+                st.markdown("**Governance Gaps (Why):**")
+                for gap in state["governance"]["gaps"]:
+                    st.markdown(f"- {gap}")
+
+            st.download_button(
+                label=f"📥 Export {state['company_name']} State (JSON)",
+                data=json.dumps(state, indent=2),
+                file_name=f"{state['company_name']}_state.json",
+                mime="application/json",
+                key=f"export_{state['company_name']}_{state['audit_date']}"
+            )
+
+
 def main():
     """Main app."""
     render_header()
 
-    # Initialize session state
-    if 'step' not in st.session_state:
-        st.session_state.step = 0
-    if 'form_key' not in st.session_state:
-        st.session_state.form_key = 0
+    tab1, tab2 = st.tabs(["Audit Engine", "Operational Intelligence"])
 
-    # Progress bar
-    if st.session_state.step == 0:
-        st.progress(0)
-    elif st.session_state.step == 1:
-        st.progress(0.5)
-    else:
-        st.progress(1.0)
-
-    # Step 0: Company + All Form Sections
-    if st.session_state.step == 0:
-        st.markdown("")
-
-        # Company section
-        company_data = render_company_section()
-
-        st.markdown("")
-        st.divider()
-
-        # Scoring sections
-        awareness = render_awareness_section()
-        st.markdown("")
-        st.divider()
-
-        adoption = render_adoption_section()
-        st.markdown("")
-        st.divider()
-
-        integration = render_integration_section()
-        st.markdown("")
-        st.divider()
-
-        governance = render_governance_section()
-        st.markdown("")
-        st.divider()
-
-        roi = render_roi_section()
-        st.markdown("")
-        st.divider()
-
-        # Spend section
-        spend_data = render_spend_section()
-
-        st.markdown("")
-
-        # Submit button
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("🚀 Run AI Audit", type="primary", use_container_width=True):
-                # Validate required fields
-                if not all([
-                    company_data['company_name'],
-                    company_data['contact_name'],
-                    company_data['contact_email']
-                ]):
-                    st.error("Please fill in all required fields (marked with *)")
-                else:
-                    # Combine all data
-                    responses = {**awareness, **adoption, **integration, **governance, **roi}
-
-                    audit_data = {
-                        **company_data,
-                        **spend_data,
-                        "responses": responses
-                    }
-
-                    st.session_state.audit_data = audit_data
-                    st.session_state.step = 1
-                    st.rerun()
-
-    # Step 1: Processing
-    elif st.session_state.step == 1:
-        st.markdown("")
-        st.info("🔄 Processing your audit...")
-
-        audit_data = st.session_state.audit_data
-        responses = audit_data['responses']
-
-        # Run scoring
-        scores = calculate_scores(responses)
-
-        # Run agent analyses
-        tool_analysis = analyze_tools(responses, audit_data)
-        workflow_analysis = analyze_workflows(responses, scores)
-        compliance_analysis = analyze_compliance(responses, scores)
-        analytics_report = generate_analytics_report(
-            scores, tool_analysis, workflow_analysis, compliance_analysis, audit_data
-        )
-
-        # Generate PDF
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        safe_name = audit_data['company_name'].replace(' ', '_').replace('/', '_')
-        pdf_path = f"report_{safe_name}_{timestamp}.pdf"
-
-        audit_result = {
-            'company_name': audit_data['company_name'],
-            'audit_date': datetime.now().isoformat(),
-            'scores': scores,
-            'agent_findings': {
-                'tool_evaluator': tool_analysis,
-                'workflow_optimizer': workflow_analysis,
-                'compliance_auditor': compliance_analysis,
-                'analytics_reporter': analytics_report,
-            }
-        }
-
-        generate_report(audit_data, scores, audit_result['agent_findings'], pdf_path)
-
-        # Show results
-        render_results(scores, audit_result, pdf_path)
-
-        # New audit button
-        st.markdown("")
-        if st.button("🔄 Start New Audit"):
+    with tab1:
+        # Initialize session state
+        if 'step' not in st.session_state:
             st.session_state.step = 0
-            st.session_state.form_key += 1
-            st.rerun()
+        if 'form_key' not in st.session_state:
+            st.session_state.form_key = 0
+
+        # Progress bar
+        if st.session_state.step == 0:
+            st.progress(0)
+        elif st.session_state.step == 1:
+            st.progress(0.5)
+        else:
+            st.progress(1.0)
+
+        # Step 0: Company + All Form Sections
+        if st.session_state.step == 0:
+            st.markdown("")
+
+            # Company section
+            company_data = render_company_section()
+
+            st.markdown("")
+            st.divider()
+
+            # Scoring sections
+            awareness = render_awareness_section()
+            st.markdown("")
+            st.divider()
+
+            adoption = render_adoption_section()
+            st.markdown("")
+            st.divider()
+
+            integration = render_integration_section()
+            st.markdown("")
+            st.divider()
+
+            governance = render_governance_section()
+            st.markdown("")
+            st.divider()
+
+            roi = render_roi_section()
+            st.markdown("")
+            st.divider()
+
+            # Spend section
+            spend_data = render_spend_section()
+
+            st.markdown("")
+
+            # Submit button
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("🚀 Run AI Audit", type="primary", use_container_width=True):
+                    # Validate required fields
+                    if not all([
+                        company_data['company_name'],
+                        company_data['contact_name'],
+                        company_data['contact_email']
+                    ]):
+                        st.error("Please fill in all required fields (marked with *)")
+                    else:
+                        # Combine all data
+                        responses = {**awareness, **adoption, **integration, **governance, **roi}
+
+                        audit_data = {
+                            **company_data,
+                            **spend_data,
+                            "responses": responses
+                        }
+
+                        st.session_state.audit_data = audit_data
+                        st.session_state.step = 1
+                        st.rerun()
+
+        # Step 1: Processing
+        elif st.session_state.step == 1:
+            st.markdown("")
+            st.info("🔄 Processing your audit...")
+
+            audit_data = st.session_state.audit_data
+            responses = audit_data['responses']
+
+            # Run scoring
+            scores = calculate_scores(responses)
+
+            # Generate Operational Intelligence Model & Persist
+            from backend.services.entity_mapper import map_organization
+            from backend.db.database import save_audit_state, init_db
+
+            # Ensure database is initialized
+            init_db()
+
+            org_model = map_organization(audit_data, responses)
+            audit_id = save_audit_state(audit_data, responses, scores['total_score'], org_model)
+
+            # Run agent analyses
+            tool_analysis = analyze_tools(responses, audit_data)
+            workflow_analysis = analyze_workflows(responses, scores)
+            compliance_analysis = analyze_compliance(responses, scores)
+            analytics_report = generate_analytics_report(
+                scores, tool_analysis, workflow_analysis, compliance_analysis, audit_data
+            )
+
+            # Generate PDF
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            safe_name = audit_data['company_name'].replace(' ', '_').replace('/', '_')
+            pdf_path = f"report_{safe_name}_{timestamp}.pdf"
+
+            audit_result = {
+                'company_name': audit_data['company_name'],
+                'audit_date': datetime.now().isoformat(),
+                'scores': scores,
+                'agent_findings': {
+                    'tool_evaluator': tool_analysis,
+                    'workflow_optimizer': workflow_analysis,
+                    'compliance_auditor': compliance_analysis,
+                    'analytics_reporter': analytics_report,
+                }
+            }
+
+            try:
+                generate_report(audit_data, scores, audit_result['agent_findings'], pdf_path)
+            except Exception as e:
+                print(f"Warning: PDF generation failed: {e}")
+
+            # Show results
+            render_results(scores, audit_result, pdf_path)
+
+            # New audit button
+            st.markdown("")
+            if st.button("🔄 Start New Audit"):
+                st.session_state.step = 0
+                st.session_state.form_key += 1
+                st.rerun()
+
+    with tab2:
+        render_operational_intelligence()
 
 
 if __name__ == "__main__":
