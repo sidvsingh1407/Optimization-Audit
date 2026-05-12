@@ -1,0 +1,5 @@
+networkx
+streamlit
+pandas
+plotly
+reportlab
