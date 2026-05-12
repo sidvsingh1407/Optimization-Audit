@@ -8,6 +8,8 @@ Usage: python report_generator.py <audit_data.json> <scores.json> <output.pdf>
 
 import json
 import sys
+from backend.config.settings import OUTPUTS_DIR, REPORTS_DIR, RUNTIME_DIR
+
 from datetime import datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4

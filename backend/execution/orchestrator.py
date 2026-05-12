@@ -11,11 +11,20 @@ Usage:
 
 import json
 import sys
+
+# Add project root to sys.path
+import os
+from backend.config.settings import OUTPUTS_DIR, REPORTS_DIR, RUNTIME_DIR
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 import os
 from datetime import datetime
 from pathlib import Path
 
-from scoring_engine import calculate_scores, format_score_report, load_form_responses
+from backend.persistence.database import init_db
+from backend.audit_modules.scoring.scoring_engine import calculate_scores, format_score_report, load_form_responses
 
 
 # =============================================================================
@@ -352,7 +361,7 @@ def run_audit(form_response_path):
     # Step 5: Generate PDF report
     print("[5/5] Generating PDF report...")
     try:
-        from report_generator import generate_report
+        from backend.execution.reporting.report_generator import generate_report
         pdf_path = output_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
         generate_report(data, scores, audit_result['agent_findings'], str(pdf_path))
         print(f"      Report saved: {pdf_path}")
@@ -375,6 +384,7 @@ def run_audit(form_response_path):
 
 
 def main():
+    init_db()
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(1)
@@ -401,7 +411,7 @@ def main():
             print("Usage: python orchestrator.py report <audit.json> <scores.json> <output.pdf>")
             sys.exit(1)
         # Handled by report_generator.py
-        from report_generator import main as report_main
+        from backend.execution.reporting.report_generator import main as report_main
         sys.argv = sys.argv[1:]  # Remove 'report' command
         report_main()
 
