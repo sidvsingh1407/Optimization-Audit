@@ -23,9 +23,9 @@
 ### Run an Audit
 
 ```bash
-# 1. Create a form response file (see test_response.json for format)
+# 1. Create a form response file (see data/test_inputs/test_response.json for format)
 # 2. Run the full audit pipeline
-python orchestrator.py run test_response.json
+PYTHONPATH=. python backend/execution/orchestrator.py run data/test_inputs/test_response.json
 
 # Output:
 # - scores_YYYYMMDD-HHMMSS.json
@@ -35,7 +35,7 @@ python orchestrator.py run test_response.json
 
 ### Score Only (no report)
 ```bash
-python orchestrator.py score test_response.json
+PYTHONPATH=. python backend/execution/orchestrator.py score data/test_inputs/test_response.json
 ```
 
 ---
@@ -44,15 +44,23 @@ python orchestrator.py score test_response.json
 
 ```
 ai-productivity-os/
-├── orchestrator.py        # Main entry point - runs full audit pipeline
-├── scoring_engine.py      # Calculates 5 dimension scores (0-20 each)
-├── report_generator.py    # Generates PDF reports
-├── agent_prompts.md       # Prompts for 4 analysis agents (V2: API calls)
-├── database_schema.md     # Airtable + Google Sheets schema
-├── tally_form_structure.md # Complete form structure for Tally.so
-├── scoring_rubric.md      # Full scoring rubric documentation
-├── test_response.json     # Sample form response for testing
-└── README.md              # This file
+├── backend/                  # Core operational intelligence and execution
+│   ├── audit_modules/        # Intelligence and scoring logic
+│   ├── execution/            # Orchestration and pipeline
+│   ├── config/               # Settings and prompts
+│   ├── persistence/          # Database integration
+│   ├── contracts/            # Pydantic data contracts
+│   └── utils/                # Logging and helpers
+├── frontend/                 # Streamlit UI
+├── docs/                     # Specifications and architectural docs
+├── tests/                    # Deterministic testing suites
+├── data/                     # Output artifacts and runtime DB
+│   ├── test_inputs/          # Sample forms
+│   ├── runtime/              # SQLite database
+│   ├── generated_outputs/    # JSON artifacts
+│   └── generated_reports/    # PDF artifacts
+├── requirements.txt
+└── README.md
 ```
 
 ---
@@ -109,18 +117,18 @@ Client-facing PDF report with:
 ## Next Steps (V2)
 
 ### 1. Set Up Tally Form
-- Create form at https://tally.so using `tally_form_structure.md`
+- Create form at https://tally.so using `docs/workflows/tally_form_structure.md`
 - Enable Google Sheets export
 - Test with internal team
 
 ### 2. Set Up Airtable
-- Create base using `database_schema.md`
+- Create base using `docs/architecture/database_schema.md`
 - Get Base ID and API token
 - Update orchestrator to write directly
 
 ### 3. Connect Claude API (Optional)
 - Replace rule-based agents with actual API calls
-- Use prompts from `agent_prompts.md`
+- Use prompts from `backend/config/prompts/agent_prompts.md`
 
 ### 4. Build Benchmark Dashboard
 - Google Sheets auto-populates from opt-in audits
