@@ -16,14 +16,14 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from scoring_engine import calculate_scores, format_score_report
-from orchestrator import (
+from backend.audit_modules.scoring.scoring_engine import calculate_scores, format_score_report
+from backend.execution.orchestrator import (
     analyze_tools,
     analyze_workflows,
     analyze_compliance,
     generate_analytics_report
 )
-from report_generator import generate_report
+from backend.execution.reporting.report_generator import generate_report
 
 
 # Page config

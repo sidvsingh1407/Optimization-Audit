@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment
+.env
+.venv
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Project Data & Artifacts
+data/runtime/*.db
+data/generated_outputs/
+data/generated_reports/

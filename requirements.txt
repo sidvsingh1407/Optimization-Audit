@@ -1,0 +1,6 @@
+reportlab
+streamlit
+google-generativeai
+streamlit-authenticator
+pydantic
+pydantic>=2.0.0
