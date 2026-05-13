@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/runtime/
+audit_*.json
+scores_*.json
+report_*.pdf

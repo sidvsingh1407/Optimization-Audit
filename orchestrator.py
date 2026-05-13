@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from scoring_engine import calculate_scores, format_score_report, load_form_responses
-
+from backend.execution.orchestrator import run_audit as new_run_audit
 
 # =============================================================================
 # AGENT SIMULATION (MVP: Simple rule-based analysis)
@@ -278,100 +278,22 @@ def generate_analytics_report(scores, tool_analysis, workflow_analysis, complian
 
 
 def run_audit(form_response_path):
-    """Run complete audit pipeline."""
+    """Run complete audit pipeline via lightweight wrapper to backend logic."""
     print("=" * 60)
     print("AI PRODUCTIVITY INTELLIGENCE SYSTEM")
-    print("Audit Pipeline")
+    print("Audit Pipeline (Wrapper mode)")
     print("=" * 60)
-    print()
 
-    # Step 1: Load form responses
-    print("[1/5] Loading form responses...")
-    data = load_form_responses(form_response_path)
-    # Company name can be at root level OR inside responses
-    company_name = data.get('company_name') or data.get('responses', {}).get('company_name', 'Unknown')
-    audit_data = data.get('responses', data)
-    print(f"      Company: {company_name}")
-    print()
-
-    # Step 2: Calculate scores
-    print("[2/5] Calculating AI maturity scores...")
-    scores = calculate_scores(audit_data)
-    print(format_score_report(scores, company_name))
-    print()
-
-    # Step 3: Run agent analyses
-    print("[3/5] Running agent analyses...")
-
-    print("      - Tool Evaluator...")
-    tool_analysis = analyze_tools(audit_data, data)
-
-    print("      - Workflow Optimizer...")
-    workflow_analysis = analyze_workflows(audit_data, scores)
-
-    print("      - Compliance Auditor...")
-    compliance_analysis = analyze_compliance(audit_data, scores)
-
-    print("      - Analytics Reporter...")
-    analytics_report = generate_analytics_report(scores, tool_analysis, workflow_analysis, compliance_analysis, data)
-
-    print("      Done.")
-    print()
-
-    # Step 4: Save intermediate results
-    print("[4/5] Saving audit results...")
-
-    output_dir = Path(form_response_path).parent
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-
-    # Save scores
-    scores_path = output_dir / f"scores_{timestamp}.json"
-    with open(scores_path, 'w') as f:
-        json.dump(scores, f, indent=2)
-    print(f"      Scores saved: {scores_path}")
-
-    # Save full audit
-    audit_result = {
-        'company_name': company_name,
-        'audit_date': datetime.now().isoformat(),
-        'scores': scores,
-        'agent_findings': {
-            'tool_evaluator': tool_analysis,
-            'workflow_optimizer': workflow_analysis,
-            'compliance_auditor': compliance_analysis,
-            'analytics_reporter': analytics_report,
-        }
-    }
-
-    audit_path = output_dir / f"audit_{timestamp}.json"
-    with open(audit_path, 'w') as f:
-        json.dump(audit_result, f, indent=2)
-    print(f"      Audit results saved: {audit_path}")
-    print()
-
-    # Step 5: Generate PDF report
-    print("[5/5] Generating PDF report...")
-    try:
-        from report_generator import generate_report
-        pdf_path = output_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
-        generate_report(data, scores, audit_result['agent_findings'], str(pdf_path))
-        print(f"      Report saved: {pdf_path}")
-    except ImportError as e:
-        print(f"      Warning: report_generator not available ({e})")
-        print("      Install with: pip install reportlab")
-        pdf_path = None
+    # Delegate to the authoritative backend/execution logic
+    res = new_run_audit(form_response_path)
 
     print()
     print("=" * 60)
     print("AUDIT COMPLETE")
+    print(f"Execution ID: {res['execution_id']}")
     print("=" * 60)
 
-    return {
-        'scores_path': str(scores_path),
-        'audit_path': str(audit_path),
-        'pdf_path': str(pdf_path) if pdf_path else None,
-        'scores': scores,
-    }
+    return res
 
 
 def main():
