@@ -330,7 +330,7 @@ def run_audit(form_response_path):
     # Step 4: Save intermediate results
     print("[4/5] Saving audit results...")
 
-    output_dir = Path(form_response_path).parent
+    output_dir = OUTPUTS_DIR
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # Save scores
@@ -362,7 +362,7 @@ def run_audit(form_response_path):
     print("[5/5] Generating PDF report...")
     try:
         from backend.execution.reporting.report_generator import generate_report
-        pdf_path = output_dir / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
+        pdf_path = REPORTS_DIR / f"report_{company_name.replace(' ', '_')}_{timestamp}.pdf"
         generate_report(data, scores, audit_result['agent_findings'], str(pdf_path))
         print(f"      Report saved: {pdf_path}")
     except ImportError as e:
