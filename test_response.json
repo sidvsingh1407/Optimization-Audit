@@ -1,4 +1,5 @@
 {
+  "schema_version": "1.0.0",
   "company_name": "Test Corp",
   "industry": "SaaS",
   "employee_count": "50-99",
